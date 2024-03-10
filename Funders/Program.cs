@@ -17,9 +17,8 @@ List<Funder> funders = [
     new Funder("red", 50_000),
 ];
 
-var result = CalculateFundersForEach(startUps, funders);
-
-foreach (var group in result.GroupBy(self => self.StartUp))
+var result1 = CalculateFundersForEach(startUps, funders);
+foreach (var group in result1.GroupBy(self => self.StartUp))
 {
     Console.WriteLine($"{group.Key.Name} needs {group.Key.MoneyNeeded:C}");
     foreach (var item in group)
@@ -29,7 +28,22 @@ foreach (var group in result.GroupBy(self => self.StartUp))
     Console.WriteLine();
 }
 
-IReadOnlyCollection<Funding> CalculateFundersForEach(IEnumerable<StartUp> startUps, IEnumerable<Funder> funders)
+Console.WriteLine();
+Console.WriteLine("--------------------------------------------");
+Console.WriteLine();
+
+var result2 = CalculateFundersRecursion(startUps, funders);
+foreach (var group in result2.GroupBy(self => self.StartUp))
+{
+    Console.WriteLine($"{group.Key.Name} needs {group.Key.MoneyNeeded:C}");
+    foreach (var item in group)
+    {
+        Console.WriteLine($"   Founded by {item.Funder.Name} with {item.Money:C} from the original {item.Funder.MoneyAvailable:C}");
+    }
+    Console.WriteLine();
+}
+
+static IReadOnlyCollection<Funding> CalculateFundersForEach(IEnumerable<StartUp> startUps, IEnumerable<Funder> funders)
 {
     var result = new List<Funding>();
 
@@ -46,7 +60,7 @@ IReadOnlyCollection<Funding> CalculateFundersForEach(IEnumerable<StartUp> startU
             {
                 if (!fundersEnumerable.MoveNext())
                 {
-                    break;
+                    throw new InvalidOperationException("No more funders");
                 }
 
                 funderCurrent = fundersEnumerable.Current;
@@ -71,6 +85,46 @@ IReadOnlyCollection<Funding> CalculateFundersForEach(IEnumerable<StartUp> startU
     return result;
 }
 
+static IReadOnlyCollection<Funding> CalculateFundersRecursion(IEnumerable<StartUp> startUps, IEnumerable<Funder> funders)
+{
+    var result = new List<Funding>();
+
+    using var fundersEnumerable = funders.GetEnumerator();
+    var moneyStillAvailable = decimal.Zero;
+
+    foreach (var startUp in startUps)
+    {
+        CalculateStarUp(startUp, startUp.MoneyNeeded);
+    }
+
+    return result;
+
+    void CalculateStarUp(StartUp startUp, decimal moneyStillNeeded)
+    {
+        if (moneyStillAvailable == 0)
+        {
+            if (!fundersEnumerable.MoveNext())
+            {
+                throw new InvalidOperationException("No more funders");
+            }
+            moneyStillAvailable = fundersEnumerable.Current.MoneyAvailable;
+        }
+
+        if (moneyStillAvailable >= moneyStillNeeded)
+        {
+            result.Add(new Funding(startUp, fundersEnumerable.Current, moneyStillNeeded));
+            moneyStillAvailable -= moneyStillNeeded;
+        }
+        else
+        {
+            result.Add(new Funding(startUp, fundersEnumerable.Current, moneyStillAvailable));
+            moneyStillNeeded -= moneyStillAvailable;
+            moneyStillAvailable = 0;
+
+            CalculateStarUp(startUp, moneyStillNeeded);
+        }
+    }
+}
 
 public record StartUp(string Name, decimal MoneyNeeded);
 public record Funder(string Name, decimal MoneyAvailable);
