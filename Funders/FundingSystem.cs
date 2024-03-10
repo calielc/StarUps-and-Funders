@@ -11,18 +11,18 @@
 
     public IReadOnlyCollection<Funding> CalculateFundersForEach()
     {
-        var result = new List<Funding>();
+        var result = new List<Funding>(_startUps.Count);
 
         using var fundersEnumerable = _funders.GetEnumerator();
         var funderCurrent = default(Funder)!;
-        var moneyStillAvailable = decimal.Zero;
+        var moneyAvailable = decimal.Zero;
 
         foreach (var startUp in _startUps)
         {
-            var moneyStillNeeded = startUp.MoneyNeeded;
-            while (moneyStillNeeded > 0)
+            var moneyNeeded = startUp.MoneyNeeded;
+            while (moneyNeeded > 0)
             {
-                if (moneyStillAvailable == 0)
+                if (moneyAvailable == 0)
                 {
                     if (!fundersEnumerable.MoveNext())
                     {
@@ -30,20 +30,20 @@
                     }
 
                     funderCurrent = fundersEnumerable.Current;
-                    moneyStillAvailable = funderCurrent.MoneyAvailable;
+                    moneyAvailable = funderCurrent.MoneyAvailable;
                 }
 
-                if (moneyStillAvailable >= moneyStillNeeded)
+                if (moneyAvailable >= moneyNeeded)
                 {
-                    result.Add(new Funding(startUp, funderCurrent, moneyStillNeeded));
-                    moneyStillAvailable -= moneyStillNeeded;
-                    moneyStillNeeded = 0;
+                    result.Add(new Funding(startUp, funderCurrent, moneyNeeded));
+                    moneyAvailable -= moneyNeeded;
+                    moneyNeeded = 0;
                 }
                 else
                 {
-                    result.Add(new Funding(startUp, funderCurrent, moneyStillAvailable));
-                    moneyStillNeeded -= moneyStillAvailable;
-                    moneyStillAvailable = 0;
+                    result.Add(new Funding(startUp, funderCurrent, moneyAvailable));
+                    moneyNeeded -= moneyAvailable;
+                    moneyAvailable = 0;
                 }
             }
         }
@@ -53,10 +53,10 @@
 
     public IReadOnlyCollection<Funding> CalculateFundersRecursion()
     {
-        var result = new List<Funding>();
+        var result = new List<Funding>(_startUps.Count);
 
         using var fundersEnumerable = _funders.GetEnumerator();
-        var moneyStillAvailable = decimal.Zero;
+        var moneyAvailable = decimal.Zero;
 
         foreach (var startUp in _startUps)
         {
@@ -65,29 +65,29 @@
 
         return result;
 
-        void CalculateStarUp(StartUp startUp, decimal moneyStillNeeded)
+        void CalculateStarUp(StartUp startUp, decimal moneyNeeded)
         {
-            if (moneyStillAvailable == 0)
+            if (moneyAvailable == 0)
             {
                 if (!fundersEnumerable.MoveNext())
                 {
                     throw new InvalidOperationException("No more funders");
                 }
-                moneyStillAvailable = fundersEnumerable.Current.MoneyAvailable;
+                moneyAvailable = fundersEnumerable.Current.MoneyAvailable;
             }
 
-            if (moneyStillAvailable >= moneyStillNeeded)
+            if (moneyAvailable >= moneyNeeded)
             {
-                result.Add(new Funding(startUp, fundersEnumerable.Current, moneyStillNeeded));
-                moneyStillAvailable -= moneyStillNeeded;
+                result.Add(new Funding(startUp, fundersEnumerable.Current, moneyNeeded));
+                moneyAvailable -= moneyNeeded;
             }
             else
             {
-                result.Add(new Funding(startUp, fundersEnumerable.Current, moneyStillAvailable));
-                moneyStillNeeded -= moneyStillAvailable;
-                moneyStillAvailable = 0;
+                result.Add(new Funding(startUp, fundersEnumerable.Current, moneyAvailable));
+                moneyNeeded -= moneyAvailable;
+                moneyAvailable = 0;
 
-                CalculateStarUp(startUp, moneyStillNeeded);
+                CalculateStarUp(startUp, moneyNeeded);
             }
         }
     }
